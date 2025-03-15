@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <canvas id="canvas" width="800" height="600"></canvas>
+  </body>
+  <script>
+    const canvas = document.getElementById("canvas");
+    async function webgpu() {
+      if (!navigator.gpu) {
+        console.error("WebGPU not supported");
+        showWarning("WebGPU not supported");
+        throw new Error("WebGPU not supported");
+      }
+      const adapter = await navigator.gpu.requestAdapter();
+      if (!adapter) {
+        console.error("No adapter found");
+        showWarning("No adapter found");
+        throw new Error("No adapter found");
+      }
+      let device = await adapter.requestDevice();
+      if (!device) {
+        console.error("No device found");
+        showWarning("No device found");
+        throw new Error("No device found");
+      }
+      const context = canvas.getContext("webgpu");
+
+      const canvasConfig = {
+        device,
+        format: navigator.gpu.getPreferredCanvasFormat(),
+        usage: GPUTextureUsage.RENDER_ATTACHMENT,
+        alphaMode: "opaque",
+      };
+
+      context.configure(canvasConfig);
+
+      let colorTexture = context.getCurrentTexture();
+      let colorTextureView = colorTexture.createView();
+
+      let colorAttachment = {
+        view: colorTextureView,
+        loadValue: { r: 1, g: 0, b: 0, a: 1 },
+        loadOp: "clear",
+        storeOp: "store",
+      };
+
+      const renderPassDescriptor = {
+        colorAttachments: [colorAttachment],
+      };
+
+      const commandEncoder = device.createCommandEncoder();
+
+      const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+      passEncoder.setViewport(0, 0, canvas.width, canvas.height, 0, 1);
+      passEncoder.end();
+
+      device.queue.submit([commandEncoder.finish()]);
+    }
+
+    webgpu();
+  </script>
+</html>
